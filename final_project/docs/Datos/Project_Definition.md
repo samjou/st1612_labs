@@ -1,4 +1,4 @@
-# Analisis de Sentimientos (Opiniones Politicas)
+# Análisis de Sentimientos (Opiniones Políticas)
 - Mateo Tapias A.
 - Mateo G. Gómez
 
