@@ -1,17 +1,18 @@
 # Analisis de Sentimientos (Opiniones Politicas)
 - Mateo Tapias A.
-- Mateo Gutierrez
+- Mateo G. Gómez
 
-## Descripcion
-Se buscar observer la opinion politica en Twitter de los ciudadanos, sobre algunas figuras politicas de la sociedad colombiana.
+## Descripción
+Se buscar observar la opinión política en Twitter de los ciudadanos, sobre algunas figuras políticas de la sociedad colombiana.
 
-Para esto, se utilizara las siguientes tecnologias en el servicio de nube AWS. 
-> Mas informacion en el siguiente diagrama.
+Para esto, se utilizará las siguientes tecnologías en el servicio de nube AWS. 
+> Mas información en el siguiente diagrama.
 
 - Twitter API
 - Kafka
 - EC2 instances
 - S3 Buckets
+- Comprenhend
 - Glue
 - Athena
 - Logstash
@@ -24,17 +25,18 @@ Arquitectura de referencia utilizada: https://docs.microsoft.com/en-us/azure/arc
 
 
 ## Flujo Datos
-El flujo de datos en el proyecto es de la siguiente manera.
+El flujo de datos del proyecto es el siguiente:
 
-1. Se capturan los datos (tweets) a traves de la API de twitter.
-2. Con un script de Python que actua como productor de Kafka, se envian los tweets al topic `raw-topic`
+1. Se capturan los datos (tweets) a traves de la API de Twitter.
+2. Con un script de Python que actua como productor de Kafka, se envian los tweets al tópico `raw-topic`
 3. A partir de este `raw-topic`, existen dos consumidores.
-	- Un script de Python que actuan como un consumidor 01, con el objetivo de guardar los tweets sin modificar en el Datalake
-	- Un script de Python que actua como un consumidor 02, que buscar realizar el analisis de sentimiento en los mensajes de los tweets
-4. El consumidor 02, tambien actua como un productor para el topico de Kafka `sentiment-topic`. Luego de realizar el analisis de un tweet, este consumidor 02 se encarga de publicarlo en el topic anterior.
-5. El consumidor 03, un script de Python que se encarga de consumir el topico `sentiment-topic` y de acuerdo a la classificacion de cada tweet, lo almacena en un bucket de S3 `refined-data`.
-6. Luego tenemos a AWS Glue, que se encarga de indexar este bucket `refined-data` y a traves de Athena, podemos explorar los datos refinados.
-7. Tambien se utiliza Logstash para consumir estos datos refinados desde el bucket de S3 y permitis su visualizacion en Kibana.
+	- Un script de Python que actua como un consumidor 01, con el objetivo de guardar los tweets sin modificar en el Datalake
+	- Un script de Python que actua como un consumidor 02, que buscar realizar el análisis de sentimientos en los tweets
+4. El consumidor 02, tambien actua como un productor para el tópico de Kafka `sentiment-topic`. luego de realizar el análisis de un tweet, este consumidor 02 se encarga de publicarlo en el tópico anterior.
+5. Al mismo tiempo hay un servicio de AWS llamado Comprenhend que permité realizar el análisis de los sentimientos de los tweets obtenidos directamente desde Kafka.
+6. El consumidor 03, es un script de Python que se encarga de consumir el topico `sentiment-topic` y de acuerdo a la clasificación de cada tweet, lo almacena en un bucket de S3 llamado `refined-data`.
+7. Luego tenemos a AWS Glue, que se encarga de indexar el bucket `refined-data` y a través de Athena, podemos explorar los datos refinados.
+8. Tambien se utiliza Logstash para consumir estos datos directamente desde Kafka y así permitir su visualizacion en Kibana.
 
 # Setup
 
@@ -143,6 +145,65 @@ Download this script [save_to_refined.py](../_resources/save_to_refined.py) on t
 ```
 python3 save_to_refined.py
 ```
+
+## Comprehend
+
+Obtener llaves de la cuenta AWS para usar el servicio de comprehend, ponerlas en variables de entorno o en el archivo `credentials` de AWS, una vez se tenga esto se debe llamar el servicio de la siguiente forma:
+
+```python
+comprehend = boto3.client(
+    service_name='comprehend',
+    region_name='eu-west-1',
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+```
+Con esto estará listo el servicio para procesar los tweets.
+
+## ElasticSearch, Logstash y Kibana (ELK):
+
+### Instalar ElasticSearch
+
+Se recomienda usar una máquina AWS EC2: t2.medium / 20 GB
+
+Ejecutar los siguientes comandos para realizar la instalación del servicio `ElasticSearch`:
+```bash
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.15.1-linux-x86_64.tar.gz
+tar -xzf elasticsearch-7.15.1-linux-x86_64.tar.gz
+cd elasticsearch-7.15.1/
+bin/elasticsearch -d -p pid
+```
+
+### Instalación de Logstash:
+
+Se recomienda usar una máquina AWS EC2: t2.medium / 20 GB (puede ser la misma que `ElasticSearch`
+
+Ejecutar los siguientes comandos para realizar la instalación del servicio `Logstash`:
+```bash
+wget https://artifacts.elastic.co/downloads/logstash/logstash-7.15.1-linux-x86_64.tar.gz
+tar -xzf logstash-7.15.1-linux-x86_64.tar.gz
+cd logstash-7.15.1
+bin/logstash -f etl-file.conf
+```
+
+### Instalación de Kibana:
+
+Se recomienda usar una máquina AWS EC2: t2.medium / 20 GB (puede ser la misma que `ElasticSearch y Logstash`:
+
+Ejecutar los siguientes comandos para realizar la instalación del servicio `Kibana`:
+```bash
+curl -O https://artifacts.elastic.co/downloads/kibana/kibana-7.15.1-linux-x86_64.tar.gz
+tar -xzf kibana-7.15.1-linux-x86_64.tar.gz
+cd kibana-7.15.1-linux-x86_64/
+```
+*Descomentar y editar el archivo `config/kibana.yml`:*
+
+```
+elasticsearch.hosts: ["http://localhost:9200"]
+server.port: 5601
+server.host: "0.0.0.0"
+```
+*Ejecutar servidor:*
+`nohup bin/kibana &`
 
 ## Glue and Athena
 Create a crawler for the `refined.finalproject` S3 Bucket.
