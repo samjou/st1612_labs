@@ -2,7 +2,7 @@
 - Mateo Tapias A.
 - Mateo G. Gómez
 
-## Descripción
+## Descripción del Proyecto
 Se buscar observar la opinión política en Twitter de los ciudadanos, sobre algunas figuras políticas de la sociedad colombiana.
 
 Para esto, se utilizará las siguientes tecnologías en el servicio de nube AWS. 
@@ -17,6 +17,30 @@ Para esto, se utilizará las siguientes tecnologías en el servicio de nube AWS.
 - Athena
 - Logstash
 - Kibana
+
+## Metodología analítica a emplear:
+
+La metodología escogida fue: `Microsoft TDSP`
+
+### Business understanding:
+
+No se realizó este proceso ya que no fue preplaneado ni se consideró necesario para el desarrollo del proyecto.
+
+### Data Acquisition and Understanding:
+
+__Data acquisition:__
+La adquisión de datos se hizo por medio de la API de Twitter desde la que se obtuvieron datos de los precandidatos que serán analizados, con esto se inició el proceso de ingesta de datos, a su vez se comenzó con la distribución de los datos en el datalake, para esto se crearon dos espacios de almacenamiento dentro del datalake de tal forma que los datos fueran divididos en `raw` y `refined`, en el caso de los datos en `raw` se almacena un `json` por cada tweet consumido y en el caso de los datos en `refined` se dividen en cuatro carpetas `Good`, `Bad`, `Neutral` y `Mixed` dentro de estas se almacena un `json` con el mensaje del tweet analizado, la calificación y el resultado del análisis de sentimientos.
+
+Se decidió seleccionar la nube de AWS ya que contabamos con la mayor cantidad de servicios que el proyecto requería, a su vez dado que fue la nube con la que mayor familiaridad contaban los desarrolladores del proyecto. Se optó por guardar los datos como ficheros tipo `json` para respetar la estructura que la API nos dió desde un inicio y a su vez al ser una cantidad de datos masiva se consideró más fácil el procesamiento y análisis en este formato. El formato de ingesta de datos fue streaming, esto dado que los datos que se generan en Twitter son constantes y se quería trabajar con datos actualizados.
+
+### Modeling (data pipeline development y feature engineering):
+El procesamiento de los datos se realiza por medio de scripts de Python que se encargan de dividir los datos en los diferentes servicios y a su vez llamar el servicio de comprenhend para el análisis de sentimientos, una vez se tiene esto se reciben los datos y se procesan en las respectivas divisiones antes mencionadas.
+
+Como último paso se pasan estos datos a Logstash para que sean visualizados por Kibana, de esta forma de generan gráficos que permiten tener una visualización de las opiniones de los ciudadanos.
+
+## Deployment (Deploy data pipeline):
+Se realizó el despliegue de toda la infraestructura usando los recursos de AWS, tales como: `Glue`,`Athena`,`ElasticSearch`,`Logstash`,`Kibana`,`Kafka` todo esto fue unido por medio de scripts de Python en los que se crearon los tópicos `raw-topic` y `sentiment-topic` de esta forma fue que se realizó la división de los datos en su forma cruda y su forma procesada.
+
 
 ## Arquitectura (Kappa)
 Arquitectura de referencia utilizada: https://docs.microsoft.com/en-us/azure/architecture/data-guide/big-data/#kappa-architecture
